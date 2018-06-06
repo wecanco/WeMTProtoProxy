@@ -1,12 +1,4 @@
 <?php
-/***************************************/
-/***************************************/
-// گروه نرم افزاری وی کن
-// WeCan-Co.ir | @WeCanGP
-/*************Copy Right**************************/
-// سو استفاده از این فایل و تغییر به نام خود و نقض حق سازنده شرعا حرام و غیرقانونی و عملی غیرانسانی است
-/***************************************/
-
 @ini_set('display_errors', 1);
 @ini_set('display_startup_errors', 1);
 error_reporting(E_ERROR);
@@ -161,31 +153,39 @@ error_reporting(E_ERROR);
 
 		];
 	
-		$MadelineProto = new \danog\MadelineProto\API('.WeMTProxy.sec',$settings);
-		$MadelineProto->parse_dc_options($MadelineProto->help->getConfig()['dc_options']);
-		$handler = new \danog\MadelineProto\Server(
-		[
-			'type' => AF_INET,
-			'protocol' => 0,
-			//'address' => '0.0.0.0',
-			'address' => $localAddr,
-			'port' => $port,
-			'handler' => '\danog\MadelineProto\Server\Proxy',
-			'extra' => [
-					'madeline' => $MadelineProto->API->datacenter->sockets, 
-					'proxy-tag' => $tag, 
-					'secret' => hex2bin($secret), 
-					'timeout' => 10
-				]
-		]
-		);
-		$handler->start();
+		try {
+			$MadelineProto = new \danog\MadelineProto\API('.WeMTProxy.sec',$settings);
+			$MadelineProto->parse_dc_options($MadelineProto->help->getConfig()['dc_options']);
+			
+			$protocol = getprotobyname('tcp');
+			$protocol = $protocol === FALSE ? 0 : $protocol;
+
+			$handler = new \danog\MadelineProto\Server(
+			[
+				'type' => AF_INET,
+				'protocol' => $protocol,
+				'address' => '0.0.0.0',
+				//'address' => $localAddr,
+				'port' => $port,
+				'handler' => '\danog\MadelineProto\Server\Proxy',
+				'extra' => [
+						'madeline' => $MadelineProto->API->datacenter->sockets, 
+						'proxy-tag' => $tag, 
+						'secret' => hex2bin($secret), 
+						'timeout' => 10
+					]
+			]
+			);
+			$handler->start();
+		}catch (Exception $e){
+			echo $e->getMessage()."\n";
+		}
 
 	
 	}else{
 		if(!isset($_SESSION['pass'])){
-			if(isset($_POST['pass']) && $_POST['pass']=='WeCanCoMT'){
-				$_SESSION['pass'] = $_POST['pass'];
+			if(isset($_REQUEST['pass']) && $_REQUEST['pass']=='WeCanCoMT'){
+				$_SESSION['pass'] = $_REQUEST['pass'];
 			}else{
 			?>
 				<form action="" method="post">
@@ -196,8 +196,8 @@ error_reporting(E_ERROR);
 				exit();
 			}
 		}
-		if(isset($_POST['mksecret'])){
-			$w = $_POST['w'];
+		if(isset($_REQUEST['mksecret'])){
+			$w = $_REQUEST['w'];
 			if($w == ""){
 				$w = "WeCan".rand(100,1000).rand(777,999)."GP";
 			}
@@ -207,32 +207,32 @@ error_reporting(E_ERROR);
 				<input name="back" type="submit" value="Back" />
 			</form>
 			<?php
-		}if(isset($_POST['runproxy'])){
+		}if(isset($_REQUEST['runproxy'])){
 			$file = explode("/",__FILE__);
-			//$comm = "cd ".getcwd()." && php ". end($file) ." ".$_POST['port']." ".$_POST['secret']." ".$_POST['tag']." web";
-			if($_POST['tag'] == ""){
-				$_POST['tag'] = md5('WeCanCo');
+			//$comm = "cd ".getcwd()." && php ". end($file) ." ".$_REQUEST['port']." ".$_REQUEST['secret']." ".$_REQUEST['tag']." web";
+			if($_REQUEST['tag'] == ""){
+				$_REQUEST['tag'] = md5('WeCanCo');
 			}
 			
 			$debug = false;
-			if(isset($_POST['debug']) && $_POST['debug']=='yes'){
+			if(isset($_REQUEST['debug']) && $_REQUEST['debug']=='yes'){
 				$debug = true;
 			}
 			
-			$conf['port'] = $_POST['port'];
-    		$conf['secret'] = $_POST['secret'];
-    		$conf['tag'] = $_POST['tag'];
+			$conf['port'] = $_REQUEST['port'];
+    		$conf['secret'] = $_REQUEST['secret'];
+    		$conf['tag'] = $_REQUEST['tag'];
     		file_put_contents('.conf',json_encode($conf));
     		file_put_contents('.runbyweb','');
 
-			$comm = "php ". __FILE__ ." ".$_POST['port']." ".$_POST['secret']." ".$_POST['tag']." web";
+			$comm = "php ". __FILE__ ." ".$_REQUEST['port']." ".$_REQUEST['secret']." ".$_REQUEST['tag']." web";
 			execInBackground($comm,$debug);
-			unset($_POST);
+			unset($_REQUEST);
 			$msg = "check";
 			sleep(5);
 			goto start;
 			
-		}if(isset($_POST['fstop'])){
+		}if(isset($_REQUEST['fstop'])){
 			$file = explode("/",__FILE__);
 			execInBackground("ps aux | grep '". end($file) ."' | awk '{print $2}' | xargs kill");
 		}else{
